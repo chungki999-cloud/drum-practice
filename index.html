@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-HK"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>鼓練習</title>
+<style>
+:root{--bg:#12141c;--sf:#1c2030;--tx:#eef0f6;--mu:#8a90a6;--R:#5ab0ff;--L:#ffb454;--ac:#ff5c7a;--ln:#3a4058;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4f5f8;--sf:#fff;--tx:#171a24;--mu:#5d6377;--R:#1a6fd1;--L:#b85f00;--ac:#d6234a;--ln:#c4c8d6;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f4f5f8;--sf:#fff;--tx:#171a24;--mu:#5d6377;--R:#1a6fd1;--L:#b85f00;--ac:#d6234a;--ln:#c4c8d6;color-scheme:light}
+:root[data-theme="dark"]{--bg:#12141c;--sf:#1c2030;--tx:#eef0f6;--mu:#8a90a6;--R:#5ab0ff;--L:#ffb454;--ac:#ff5c7a;--ln:#3a4058;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 "PingFang HK","Noto Sans HK","Microsoft JhengHei",system-ui,sans-serif}
+#app{max-width:960px;margin:0 auto;padding:16px}
+h1{font-size:2rem;margin:.6em 0 .3em}h2{font-size:1.4rem;margin:.4em 0}
+.mu{color:var(--mu);margin:.2em 0 1em}
+button,select,input{font:inherit;color:var(--tx)}
+button{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:10px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--R);outline-offset:2px}
+input,select{background:var(--sf);border:1px solid var(--ln);border-radius:8px;padding:8px 10px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.card{padding:34px 16px;font-size:1.6rem;font-weight:700;text-align:left;border-radius:16px}
+.card small{display:block;font-size:.9rem;font-weight:400;color:var(--mu);margin-top:6px}
+.card.t{grid-column:1/-1;padding:18px 16px;font-size:1.1rem}
+.staff{width:100%;height:auto;background:var(--sf);border-radius:14px;margin:8px 0}
+.bn{fill:var(--mu);font-size:14px}.lt{font-size:24px;font-weight:700}
+.nh.on{stroke:var(--tx);stroke-width:3}.lt.on{font-size:32px}
+.pl{display:grid;gap:12px;margin:12px 0}
+.bp{display:flex;align-items:center;justify-content:center;gap:24px}
+.bp button{width:72px;height:72px;font-size:2rem;border-radius:50%}
+.bp div{text-align:center}.bp b{font-size:3rem;display:block;line-height:1}.bp small{color:var(--mu)}
+.seg{display:flex;gap:8px}.seg button{flex:1;padding:14px}
+.seg .on{background:var(--ac);border-color:var(--ac);color:#fff}
+.vol{display:flex;gap:10px;align-items:center;color:var(--mu)}.vol input{flex:1}
+.play{background:var(--ac);border-color:var(--ac);color:#fff;font-size:1.8rem;font-weight:700;padding:26px;border-radius:18px}
+.tm{text-align:center;color:var(--mu)}.tm b{color:var(--tx);font-size:1.3rem}
+.done{width:100%;margin-top:6px;padding:16px}
+.ed{background:var(--sf);border-radius:14px;padding:14px;margin-top:14px;display:grid;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+.g{display:flex;gap:3px}
+.g button{width:34px;height:34px;padding:0;border-radius:6px;font-weight:700}
+.g .R{color:var(--R)}.g .L{color:var(--L)}
+.msg{color:var(--mu);min-height:1.5em}
+@media(max-width:560px){.cards{grid-template-columns:1fr}.card{padding:24px 16px}.g button{width:26px;height:30px}}
+</style></head>
+<body><div id="app"></div>
+<script id="data" type="application/json">{"pin":"1234","teacher":"老師","students":[{"name":"學生一","a":{"title":"單擊 Single stroke","bpm":60,"style":"rock","cells":"RLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRLRL"}},{"name":"學生二","a":{"title":"雙擊 Double stroke","bpm":60,"style":"funk","cells":"RRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLLRRLL"}}]}</script>
+<script>
+const TEMPLATE=document.documentElement.outerHTML;
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let D=JSON.parse($('#data').textContent);
+let role='',ei=0,bpm=60,style='rock',vol=.5,ctx=null,master=null,playing=false,step=0,nextT=0,tid=null,q=[],t0=0,last=-1;
+const CY=['.','R','L','r','l'],TP={single:'RL',double:'RRLL',para:'RLRRLRLL'};
+const A=()=>D.students[ei].a;
+const key=()=>'td:'+(role==='t'?'teacher':D.students[ei].name)+':'+new Date().toDateString();
+const base=()=>+LS.get(key())||0;
+const fmt=s=>{s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+/* ---- staff ---- */
+function staff(c){
+ let o='<svg viewBox="0 0 900 340" class="staff" role="img" aria-label="鼓譜">';
+ for(let s=0;s<2;s++){
+  const y=s*170+95;
+  o+=`<line x1="40" x2="860" y1="${y}" y2="${y}" stroke="var(--ln)" stroke-width="2"/><rect x="50" y="${y-9}" width="4" height="18" fill="var(--tx)"/><rect x="59" y="${y-9}" width="4" height="18" fill="var(--tx)"/>`;
+  [40,450,860].forEach(x=>o+=`<line x1="${x}" x2="${x}" y1="${y-14}" y2="${y+14}" stroke="var(--tx)" stroke-width="2"/>`);
+  for(let b=0;b<2;b++){
+   const bar=s*2+b,bx=40+b*410,st=bx+(b?22:44),sw=(bx+410-st-12)/16;
+   o+=`<text x="${bx+6}" y="${y-62}" class="bn">${bar+1}</text>`;
+   for(let g=0;g<4;g++){
+    const pr=[];
+    for(let k=0;k<4;k++){
+     const i=bar*16+g*4+k,ch=c[i],x=st+(g*4+k)*sw+sw/2;
+     if(ch==='.'){o+=`<path d="M${x-3} ${y-20}l6-6-6-5" fill="none" stroke="var(--mu)" stroke-width="2"/>`;continue}
+     const L=ch.toUpperCase()==='L',col=L?'var(--L)':'var(--R)';
+     pr.push([k,x]);
+     o+=`<line x1="${x+6}" x2="${x+6}" y1="${y-3}" y2="${y-42}" stroke="var(--tx)" stroke-width="2"/><ellipse id="n${i}" class="nh" cx="${x}" cy="${y}" rx="8" ry="6" fill="${col}"/><text id="t${i}" class="lt" x="${x}" y="${y+36}" text-anchor="middle" fill="${col}">${ch.toUpperCase()}</text>`;
+     if(ch!==ch.toUpperCase())o+=`<text x="${x}" y="${y-52}" text-anchor="middle" fill="var(--tx)" font-size="20" font-weight="700">&gt;</text>`;
+    }
+    if(pr.length>1){const a=pr[0][1]+6,z=pr[pr.length-1][1]+6;o+=`<rect x="${a}" y="${y-43}" width="${z-a}" height="4" fill="var(--tx)"/>`;
+     for(let j=0;j<pr.length-1;j++)if(pr[j+1][0]-pr[j][0]===1)o+=`<rect x="${pr[j][1]+6}" y="${y-34}" width="${pr[j+1][1]-pr[j][1]}" height="3" fill="var(--tx)"/>`}
+    else if(pr.length===1){const x=pr[0][1]+6;o+=`<path d="M${x} ${y-42}q8 6 6 16M${x} ${y-34}q8 6 6 16" fill="none" stroke="var(--tx)" stroke-width="2"/>`}
+   }
+  }
+ }
+ return o+'</svg>';
+}
+const refresh=()=>{const s=$('#st');if(s)s.innerHTML=staff(A().cells)};
+
+/* ---- audio ---- */
+const mtof=m=>440*2**((m-69)/12);
+const CH={M:[0,4,7],m:[0,3,7],m7:[0,3,7,10],d7:[0,4,7,10]};
+const STY={
+ rock:{p:[[48,'M'],[43,'M'],[45,'m'],[41,'M']],bass:s=>s%2===0,stab:s=>s%4===0,sd:.3},
+ funk:{p:[[48,'m7'],[41,'d7'],[48,'m7'],[43,'d7']],bass:s=>[0,3,6,8,10,14].includes(s),stab:s=>[2,5,10,13].includes(s),sd:.1}
+};
+function tone(f,t,d,type,g,lp,out){
+ const o=ctx.createOscillator(),a=ctx.createGain();o.type=type;o.frequency.value=f;
+ a.gain.setValueAtTime(g,t);a.gain.exponentialRampToValueAtTime(.0001,t+d);
+ let n=o;if(lp){const F=ctx.createBiquadFilter();F.type='lowpass';F.frequency.value=lp;o.connect(F);n=F}
+ n.connect(a);a.connect(out);o.start(t);o.stop(t+d+.02);
+}
+function sound(i,t){
+ const s=i%16,bar=Math.floor(i/16);
+ if(s%4===0)tone(s===0?1800:1200,t,.05,'square',.12,0,ctx.destination);
+ const S=STY[style];if(!S)return;
+ const [r,qk]=S.p[bar],sd=60/bpm/4;
+ if(S.bass(s))tone(mtof(r+((style==='funk'&&s===10)?12:0)),t,sd*(style==='funk'?1.6:1.8),'sawtooth',.5,450,master);
+ if(S.stab(s))CH[qk].forEach(n=>tone(mtof(r+12+n),t,Math.max(S.sd,sd),'sawtooth',.12,1500,master));
+}
+function sched(){
+ while(nextT<ctx.currentTime+.12){const i=step%64;sound(i,nextT);q.push([nextT,i]);nextT+=60/bpm/4;step++}
+}
+function hl(i){
+ ['n','t'].forEach(p=>{const a=$('#'+p+last),b=$('#'+p+i);a&&a.classList.remove('on');b&&b.classList.add('on')});last=i;
+}
+function raf(){
+ if(!playing)return;
+ const n=ctx.currentTime;while(q.length&&q[0][0]<=n)hl(q.shift()[1]);
+ const tv=$('#tv');if(tv)tv.textContent=fmt(base()+(performance.now()-t0)/1000);
+ requestAnimationFrame(raf);
+}
+function start(){
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!ctx){ctx=new AC();master=ctx.createGain();master.gain.value=vol;master.connect(ctx.destination)}
+ ctx.resume();step=0;q=[];nextT=ctx.currentTime+.08;tid=setInterval(sched,25);
+ playing=true;t0=performance.now();raf();setPB();
+}
+function stop(){
+ if(!playing)return;
+ clearInterval(tid);playing=false;
+ LS.set(key(),base()+(performance.now()-t0)/1000);
+ hl(-1);q=[];setPB();const tv=$('#tv');if(tv)tv.textContent=fmt(base());
+}
+function setPB(){const b=$('#pb');if(b)b.textContent=playing?'■ 停':'▶ 開始'}
+
+/* ---- views ---- */
+function player(){
+ return `<div class="pl"><div class="bp"><button data-a="bpm" data-d="-5" aria-label="慢啲">−</button><div><b id="bv">${bpm}</b><small>BPM</small></div><button data-a="bpm" data-d="5" aria-label="快啲">+</button></div>
+ <div class="seg">${[['none','節拍器'],['rock','Rock'],['funk','Funk']].map(([k,n])=>`<button data-a="sty" data-k="${k}" class="${style===k?'on':''}">${n}</button>`).join('')}</div>
+ <label class="vol">伴奏音量<input type="range" min="0" max="1" step=".05" value="${vol}" data-in="vol"></label>
+ <button class="play" data-a="play" id="pb">${playing?'■ 停':'▶ 開始'}</button>
+ <div class="tm">今日練習 <b id="tv">${fmt(base())}</b></div></div>`;
+}
+function home(){
+ stop();role='';
+ app.innerHTML=`<div class="top"><span></span><button data-a="theme" aria-label="切換深淺色">🌓</button></div><h1>你係邊個？</h1><p class="mu">撳自己個名，開始練習。</p>
+ <div class="cards">${D.students.map((s,i)=>`<button class="card" data-a="stu" data-i="${i}">${esc(s.name)}<small>${esc(s.a.title)}</small></button>`).join('')}<button class="card t" data-a="pin">${esc(D.teacher)}（編輯）</button></div>`;
+}
+function stu(i){
+ stop();role='s';ei=i;const a=A();bpm=a.bpm;style=a.style;
+ app.innerHTML=`<button data-a="home">← 揀名</button><h2>${esc(D.students[i].name)}：${esc(a.title)}</h2><p class="mu">目標 ${a.bpm} BPM。由慢開始，穩咗先加速。</p><div id="st">${staff(a.cells)}</div>${player()}<button class="done" data-a="done">完成，傳俾老師</button>`;
+}
+function pin(err){
+ app.innerHTML=`<button data-a="home">← 揀名</button><h2>老師入口</h2><div class="row"><input id="pn" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" aria-label="PIN"><button data-a="tea">進入</button></div><p class="msg">${err?'PIN 唔啱，再試過。':''}</p>`;
+ const p=$('#pn');p&&p.focus();
+}
+function grid(){
+ const c=A().cells;let o='';
+ for(let b=0;b<4;b++){o+='<div class="bar">';for(let g=0;g<4;g++){o+='<div class="g">';for(let k=0;k<4;k++){const i=b*16+g*4+k,ch=c[i];o+=`<button data-a="cell" data-i="${i}" class="${ch.toUpperCase()}" aria-label="第${b+1}小節第${g*4+k+1}格">${ch==='.'?'·':ch===ch.toUpperCase()?ch:ch+'>'}</button>`}o+='</div>'}o+='</div>'}
+ return o;
+}
+function tea(){
+ stop();role='t';const a=A();bpm=a.bpm;style=a.style;
+ app.innerHTML=`<div class="top"><button data-a="home">← 揀名</button><button data-a="theme" aria-label="切換深淺色">🌓</button></div>
+ <h2>編輯功課</h2>
+ <div class="row"><select data-in="who" aria-label="學生">${D.students.map((s,i)=>`<option value="${i}"${i===ei?' selected':''}>${esc(s.name)}</option>`).join('')}</select><input data-in="title" value="${esc(a.title)}" aria-label="題目" style="flex:1;min-width:180px"></div>
+ <div id="st">${staff(a.cells)}</div>${player()}
+ <div class="ed"><div class="row"><button data-a="tpl" data-k="single">Single</button><button data-a="tpl" data-k="double">Double</button><button data-a="tpl" data-k="para">Paradiddle</button><button data-a="copy">第 1 小節複製到全部</button><button data-a="clear">清空</button></div>
+ <small class="mu">撳格仔轉換：休止 → R → L → R 重音 → L 重音。</small><div id="gr">${grid()}</div></div>
+ <div class="ed"><div class="row"><input data-in="n0" value="${esc(D.students[0].name)}" aria-label="學生一名"><input data-in="n1" value="${esc(D.students[1].name)}" aria-label="學生二名"><input data-in="pin" value="${esc(D.pin)}" maxlength="8" aria-label="PIN" style="width:90px"></div>
+ <button class="done" data-a="save">儲存並發佈給學生</button><p class="msg" id="ms"></p></div>`;
+}
+async function save(){
+ const m=$('#ms');m.textContent='儲存緊…';
+ try{
+  const art=window.claude&&await window.claude.use('artifact');
+  if(!art){m.textContent='只有作者喺 Claude 入面打開先儲存到。';return}
+  const j=JSON.stringify(D).replace(/</g,'\\u003c');
+  const html='<!doctype html>\n'+TEMPLATE.replace(/(<script id="data" type="application\/json">)[\s\S]*?(<\/script>)/,(x,a,b)=>a+j+b);
+  await art.publish(html);m.textContent='已發佈。';
+ }catch(e){m.textContent='儲存唔到：'+(e&&e.message||e)}
+}
+
+/* ---- events ---- */
+const fill=p=>{A().cells=Array.from({length:64},(_,i)=>p[i%p.length]).join('')};
+const act={
+ home,theme(){const r=document.documentElement,d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches)||!r.getAttribute('data-theme');r.setAttribute('data-theme',d?'light':'dark')},
+ stu(b){stu(+b.dataset.i)},pin(){pin()},
+ tea(){const p=$('#pn');if(p&&p.value!==D.pin)return pin(1);tea()},
+ play(){playing?stop():start()},
+ bpm(b){bpm=Math.max(40,Math.min(200,bpm+ +b.dataset.d));$('#bv').textContent=bpm;if(role==='t')A().bpm=bpm},
+ sty(b){style=b.dataset.k;if(role==='t')A().style=style;document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x.dataset.k===style))},
+ tpl(b){fill(TP[b.dataset.k]);refresh();$('#gr').innerHTML=grid()},
+ copy(){const c=A().cells.slice(0,16);A().cells=c+c+c+c;refresh();$('#gr').innerHTML=grid()},
+ clear(){A().cells='.'.repeat(64);refresh();$('#gr').innerHTML=grid()},
+ cell(b){const i=+b.dataset.i,c=A().cells,n=CY[(CY.indexOf(c[i])+1)%5];A().cells=c.slice(0,i)+n+c.slice(i+1);refresh();$('#gr').innerHTML=grid()},
+ done(){
+  stop();const m=Math.max(1,Math.round(base()/60)),d=new Date();
+  const msg=`${D.students[ei].name} ${d.getMonth()+1}月${d.getDate()}日 練咗 ${m} 分鐘。練習：${A().title}，BPM ${bpm}，伴奏：${style==='none'?'節拍器':style}`;
+  const a=document.createElement('a');a.href='https://wa.me/?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+ },
+ save
+};
+app.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&act[b.dataset.a])act[b.dataset.a](b)});
+app.addEventListener('input',e=>{
+ const k=e.target.dataset.in,v=e.target.value;
+ if(k==='vol'){vol=+v;if(master)master.gain.value=vol}
+ else if(k==='title')A().title=v;
+ else if(k==='n0'||k==='n1')D.students[+k[1]].name=v;
+ else if(k==='pin')D.pin=v;
+});
+app.addEventListener('change',e=>{if(e.target.dataset.in==='who'){ei=+e.target.value;tea()}});
+app.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pn')act.tea()});
+home();
+</script></body></html>
